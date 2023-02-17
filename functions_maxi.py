@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from ipywidgets import interactive
+
 
 plt.style.use(['science', 'notebook'])
 
@@ -25,3 +27,25 @@ def cut_master_frames(master_frame, x1, y1, shape):
     else:
         pass
     return master_frame
+
+def sky_substraction(image):
+    def interactive_plot(row1, row2, column1, column2):
+        fig, ax = plt.subplots(figsize = (6, 6))
+        show = ax.imshow(image, origin = 'lower',
+                         vmin = np.nanpercentile(image, 50),
+                         vmax = np.nanpercentile(image, 95),
+                         cmap = 'inferno')
+        plt.axvline(x = column1, color = 'white')
+        plt.axvline(x = column2, color = 'white')
+            
+        plt.axhline(y = row1, color = 'white')
+        plt.axhline(y = row2, color = 'white')    
+        
+        plt.colorbar(show)
+        #plt.show() 
+    
+    return interactive(interactive_plot, 
+                        row1 = (0, image.shape[0]-1, 1),
+                        row2 = (0, image.shape[0]-1, 1), 
+                        column1 = (0, image.shape[1]-1, 1), 
+                        column2 = (0, image.shape[1]-1, 1))
