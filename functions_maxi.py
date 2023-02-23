@@ -5,14 +5,22 @@ from scipy import stats
 from ipywidgets import interactive
 
 
-plt.style.use(['science', 'notebook'])
+#plt.style.use(['science', 'notebook'])
 
-def my_plot(image):
-    plt.style.use('default')
-    fig, ax = plt.subplots(figsize = (6, 6))
+def my_plot(image, figsize = (6, 6), percentiles = (0.25, 99.75)):
+    fig, ax = plt.subplots(figsize = figsize)
     show = ax.imshow(image, origin = 'lower',
-                     vmin = np.nanpercentile(image, 5),
-                     vmax = np.nanpercentile(image, 95),
+                     vmin = np.nanpercentile(image, percentiles[0]),
+                     vmax = np.nanpercentile(image, percentiles[1]),
+                     cmap = 'inferno')
+    plt.colorbar(show)
+    plt.show() 
+    
+def my_plot_log(image):
+    fig, ax = plt.subplots(figsize = (10, 7))
+    show = ax.imshow(np.log10(image), origin = 'lower',
+                     vmin = np.nanpercentile(np.log10(image), 15),
+                     vmax = np.nanpercentile(np.log10(image), 99.9),
                      cmap = 'inferno')
     plt.colorbar(show)
     plt.show() 
@@ -30,31 +38,6 @@ def cut_master_frames(master_frame, x1, y1, shape):
         pass
     return master_frame
 
-#row1, row2, comumn1, column2 = 0, 0, 0, 0
-def sky_substraction(image):
-    #if row2 == 0: row2 = image[0].shape[0]-1; column2 = row2;
-    def interactive_plot(row1, row2, column1, column2):
-        fig, axes = plt.subplots(1, 2, figsize = (8, 4))
-        for i, ax in enumerate(axes):
-            show = ax.imshow(image[i], origin = 'lower',
-                             vmin = np.nanpercentile(image[i], 50),
-                             vmax = np.nanpercentile(image[i], 95),
-                             cmap = 'inferno')
-            ax.axvline(x = column1, color = 'white')
-            ax.axvline(x = column2, color = 'white')
-            
-            ax.axhline(y = row1, color = 'white')
-            ax.axhline(y = row2, color = 'white')    
-        
-            plt.colorbar(show, ax = ax)
-        #plt.show() 
-    
-    return interactive(interactive_plot, 
-                        row1 = (0, image[0].shape[0]-1, 1),
-                        row2 = (0, image[0].shape[0]-1, 1), 
-                        column1 = (0, image[0].shape[0]-1, 1), 
-                        column2 = (0, image[0].shape[0]-1, 1))
-
 def sky_squares_median(row1, row2, column1, column2, image):
     # three bottom rectangles
     sky1 = stats.mode(image[0:row1, 0:column1].flatten())[0]
@@ -71,3 +54,34 @@ def sky_squares_median(row1, row2, column1, column2, image):
     sky_modes = np.concatenate([sky1, sky2, sky3, sky4, sky6, sky7, sky8])
     sky = np.nanmedian(sky_modes)
     return sky
+
+# TODO preinicializar el corte con los valores anteriores
+class SkyInteractive():
+    def __init__(self, data):
+        self.data = data
+        self.fig, self.axes = plt.subplots(1, len(data), figsize = (8, 4))
+        self.widget = interactive(self.update, 
+                                  x1 = (0,1023,1), 
+                                  x2 = (0,1023,1), 
+                                  y1 = (0,1023,1), 
+                                  y2 = (0,1023,1))
+        display(self.widget)
+        
+    def sky_cut(self, x1, x2, y1, y2):
+        for i, ax in enumerate(self.axes):
+            ax.clear()
+            ax.imshow(self.data[i], origin = 'lower', 
+                      vmin = np.nanpercentile(self.data[i], 50),
+                      vmax = np.nanpercentile(self.data[i], 95),
+                      cmap = 'inferno')
+
+            ax.vlines([x1, x2], 0, 1023, color = 'w')
+            ax.hlines([y1, y2], 0, 1023, color = 'w')
+            ax.set_title('Frame: ' + str(i+1))
+    
+    def update(self, x1 = 200, x2 = 900, y1 = 200, y2 = 750):         
+        self.sky_cut(x1, x2, y1, y2)
+        self.fig.canvas.draw_idle()
+        
+    def get_cuts(self):
+        return   self.widget.kwargs.values()
