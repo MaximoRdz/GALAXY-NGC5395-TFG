@@ -1,2 +1,2 @@
 # GALAXY-NGC5395-TFG
-Colliding galaxies study (Python)
+data_load.jpynb: Colliding galaxies study (Python)
